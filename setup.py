@@ -60,7 +60,9 @@ setup(
         "smartypants==2.0.0",
         "titlecase==0.11.0",
         "termcolor==1.1.0",
-        "terminaltables==3.1.0"
+        "terminaltables==3.1.0",
+        "python-dotenv==0.10.1",
+        "urllib3==1.24.1"
     ],
     package_data={
         "se": ["data/*", "data/templates/*", "data/templates/META-INF/*", "completions/*", "completions/*/*"]
