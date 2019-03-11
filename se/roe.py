@@ -3,6 +3,7 @@ import os
 import xml.etree.ElementTree as ET 
 import urllib.request
 import json
+import se
 from dotenv import load_dotenv
 
 REQUIRED_FIELDS = {
@@ -36,17 +37,12 @@ def post_to_roe(url, d, key, secret):
 
     return urllib.request.urlopen(req, je)
 
-# parse content.opf and retrieve relevant data
-def parse_content(contentfile):
-    if not os.path.exists(contentfile):
-        print("Invalid ePUB directory")
-        return None
-    
+# extract relevant roe data from xml metadata tree
+def extract_roe_content_old(tree):
     data = {}
     try:
         #parse content xml and get metadata
-        xml = ET.parse(contentfile)
-        root = xml.getroot()
+        root = tree.getroot()
         metadata = [x for x in root if x.tag[-8:] == "metadata"][0]
         
         #iterate through metadata and extract relevant fields by tag
@@ -70,39 +66,20 @@ def parse_content(contentfile):
         if "source" in data and data["source"][:4] == "url:":
             data["source"] = data["source"][4:]
     except:
-        print(e)
-        return None
+        raise se.InvalidSeEbookException
 
     return data
 
+def extract_roe_content(metadata_tree):
+    d = {}
 
+    try:
+        title = metadata_tree.xpath("//dc:title")[0]
+        authors = metadata_tree.xpath("//dc:creator")
+        version = metadata_tree.xpath("//opf:meta[@property=\"se:revision-number\"]")[0]
 
-def main():
-    if len(sys.argv) != 2:
-        print("Wrong number of arguments. Usage: python3 roe-upload.py <path-to-directory>")
-        return
+        d = {"title": title.inner_html(), "author": "".join([x.inner_html() for x in authors]), "version": version.inner_html()}
+    except:
+        raise se.InvalidXhtmlException
     
-    path = sys.argv[1]
-
-    if not os.path.isdir(path):
-        print("ePUB directory invalid")
-        return
-
-    contentfile = "{}/src/epub/content.opf".format(path)
-    content = parse_content(contentfile)
-
-    if content is None:
-        print("Error parsing content file. Ensure /src/epub/content.opf exists in the directory, is formatted properly, and has the necessary data.")
-        return
-    
-    credentials = get_credentials()
-
-    if credentials is None:
-        print("Credentials not found. Set environment variables ROE_KEY and ROE_SECRET.")
-        return
-
-    response = post_to_roe(POST_URL, content, credentials[0], credentials[1])
-    print(response)
-
-if __name__ == "__main__":
-    main()
+    return d

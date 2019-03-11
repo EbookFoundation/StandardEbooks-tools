@@ -24,6 +24,8 @@ import se.formatting
 import se.typography
 import se.spelling
 from se.se_epub import SeEpub
+import se.roe
+import getpass
 
 def _get_commands() -> list:
 	"""
@@ -1030,3 +1032,33 @@ def word_count() -> int:
 	print("{}{}".format(total_word_count, "\t" + category if args.categorize else ""))
 
 	return 0
+
+def roe_upload() -> int:
+	parser = argparse.ArgumentParser(description="Upload eBook metadata to the Free eBook Foundation's RoE pipeline")
+	parser.add_argument("directory", metavar="DIRECTORY", help="a SE epub directory")
+	parser.add_argument("-v", "--verbose", action="store_true", help="increase output verbosity")
+	args = parser.parse_args()
+
+	try:
+		se_epub = SeEpub(args.directory)
+		
+		metadata = se_epub._get_metadata_tree()
+		data = se.roe.extract_roe_content(metadata)
+
+		# check if credentials are stored in the environment
+		# if they are not, then prompt for them
+		credentials = se.roe.get_credentials()
+
+		if credentials is None:
+			key = getpass.getpass("API Key:")
+			secret = getpass.getpass("API Secret:")
+			credentials = [key, secret]
+		
+		se.roe.post_to_roe(se.roe.POST_URL, data, credentials[0], credentials[1])
+	except se.SeException as ex:
+		se.print_error(ex, args.verbose)
+		return ex.code
+
+	return 0
+
+
