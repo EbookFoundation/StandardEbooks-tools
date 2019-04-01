@@ -139,6 +139,17 @@ def build() -> int:
 	for directory in args.directories:
 		try:
 			se_epub = SeEpub(directory)
+
+			roe_credentials = se.roe.get_credentials()
+			if roe_credentials is not None:
+				try:
+					metadata = se_epub._get_metadata_tree()
+					data = se.roe.extract_roe_content(metadata)
+					se.roe.post_to_roe(se.roe.POST_URL, data, roe_credentials[0], roe_credentials[1])
+					print("RoE credentials found, metadata uploaded")
+				except:
+					pass
+
 			se_epub.build(args.check, args.build_kobo, args.build_kindle, args.output_directory, args.proof, args.build_covers, args.verbose)
 		except se.SeException as ex:
 			se.print_error(ex, args.verbose)
@@ -1035,30 +1046,35 @@ def word_count() -> int:
 
 def roe_upload() -> int:
 	parser = argparse.ArgumentParser(description="Upload eBook metadata to the Free eBook Foundation's RoE pipeline")
-	parser.add_argument("directory", metavar="DIRECTORY", help="a SE epub directory")
+	parser.add_argument("directories", metavar="DIRECTORY", nargs="+", help="a SE epub directory")
+	parser.add_argument("-ec", "--environment-credentials", action="store_false", help="attempt to retrieve RoE credentials from environment variables ROE_KEY and ROE_SECRET")
 	parser.add_argument("-v", "--verbose", action="store_true", help="increase output verbosity")
 	args = parser.parse_args()
 
 	try:
-		se_epub = SeEpub(args.directory)
-		
-		metadata = se_epub._get_metadata_tree()
-		data = se.roe.extract_roe_content(metadata)
+		for directory in args.directories:
+			se_epub = SeEpub(directory)
+			
+			metadata = se_epub._get_metadata_tree()
+			data = se.roe.extract_roe_content(metadata)
 
-		# check if credentials are stored in the environment
-		# if they are not, then prompt for them
-		credentials = se.roe.get_credentials()
+			# check if credentials are stored in the environment
+			# if they are not, then prompt for them
+			credentials = None
 
-		if credentials is None:
-			key = getpass.getpass("API Key:")
-			secret = getpass.getpass("API Secret:")
-			credentials = [key, secret]
-		
-		se.roe.post_to_roe(se.roe.POST_URL, data, credentials[0], credentials[1])
+			if args.environment_credentials:
+				credentials = se.roe.get_credentials()
+
+			if credentials is None:
+				print("ROE_KEY or ROE_SECRET not found in environment variables. Please enter below:")
+				key = getpass.getpass("API Key:")
+				secret = getpass.getpass("API Secret:")
+				credentials = [key, secret]
+			
+			print(data)
+			se.roe.post_to_roe(se.roe.POST_URL, data, credentials[0], credentials[1])
 	except se.SeException as ex:
 		se.print_error(ex, args.verbose)
 		return ex.code
 
 	return 0
-
-

@@ -31,15 +31,36 @@ def post_to_roe(url, d, key, secret):
 
     return urllib.request.urlopen(req, je)
 
+    
 def extract_roe_content(metadata_tree):
     d = {}
 
     try:
-        title = metadata_tree.xpath("//dc:title")[0]
-        authors = metadata_tree.xpath("//dc:creator")
-        version = metadata_tree.xpath("//opf:meta[@property=\"se:revision-number\"]")[0]
-
-        d = {"title": title.inner_html(), "author": "".join([x.inner_html() for x in authors]), "version": version.inner_html()}
+        # extract xpath field shorthand function
+        def ext(f):
+            p = metadata_tree.xpath(f)
+            if (len(p) == 0):
+                return ""
+            elif (len(p) == 1):
+                return p[0].inner_html()
+            else:
+                return [x.inner_html() for x in p]
+        
+        d = {
+            "metadata": {
+                "@type": "http://schema.org/Book",
+                "title": ext("//dc:title"),
+                "author": ", ".join((lambda c : c if type(c) is list else [c])(ext("//dc:creator"))),
+                "identifier": ext("//dc:identifier"),
+                "publisher": ext("//dc:publisher"),
+                "language": ext("//dc:language"),
+                "modified": ext("//opf:meta[@property=\"dcterms:modified\"]")
+            },
+            "links": [
+                
+            ],
+            "images": []
+        }
     except:
         raise se.InvalidXhtmlException
     
