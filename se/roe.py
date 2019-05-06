@@ -6,7 +6,7 @@ import json
 import se
 from dotenv import load_dotenv
 
-POST_URL = "http://ec2-18-219-223-27.us-east-2.compute.amazonaws.com/api/publish"
+POST_URL = "https://roe.ebookfoundation.org/api/publish"
 
 # Retrieve key and secret from environment variables
 def get_credentials():

@@ -1064,14 +1064,14 @@ def roe_upload() -> int:
 
 			if args.environment_credentials:
 				credentials = se.roe.get_credentials()
-
+			
 			if credentials is None:
 				print("ROE_KEY or ROE_SECRET not found in environment variables. Please enter below:")
 				key = getpass.getpass("API Key:")
 				secret = getpass.getpass("API Secret:")
 				credentials = [key, secret]
 			
-			print(data)
+			print("Sending metadata to RoE pipeline")
 			se.roe.post_to_roe(se.roe.POST_URL, data, credentials[0], credentials[1])
 	except se.SeException as ex:
 		se.print_error(ex, args.verbose)
